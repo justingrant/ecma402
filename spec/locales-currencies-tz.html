@@ -168,24 +168,129 @@
     <h1>Use of the IANA Time Zone Database</h1>
 
     <p>
-      Implementations that adopt this specification must be time zone aware: they must use the IANA Time Zone Database <a href="https://www.iana.org/time-zones/">https://www.iana.org/time-zones/</a> to supply time zone identifiers and data used in ECMAScript calculations and formatting.
+      Implementations of this specification must be time zone aware: they must use the IANA Time Zone Database <a href="https://www.iana.org/time-zones/">https://www.iana.org/time-zones/</a> to supply time zone identifiers and data used in ECMAScript calculations and formatting.
       This section defines how the IANA Time Zone Database should be used by time zone aware implementations.
-    </p>
-    <p>
-      Except as overridden by AvailableNamedTimeZoneIdentifiers, each Zone in the IANA Time Zone Database must be a primary time zone identifier and each Link name in the IANA Time Zone Database must be a non-primary time zone identifier.
       No String may be an available named time zone identifier unless it is a Zone name or a Link name in the IANA Time Zone Database.
       Available named time zone identifiers returned by ECMAScript built-in objects must use the casing found in the IANA Time Zone Database.
     </p>
     <p>
-      In the IANA Time Zone Database, the UTC time zone is represented by the Zone *"Etc/UTC"* which is distinct from the Zone *"Etc/GMT"*.
-      For historical reasons, ECMAScript uses *"UTC"* as the primary identifier for the former Zone and does not recognize the latter Zone as distinct, instead requiring *"Etc/UTC"*, *"Etc/GMT"*, and *"GMT"* (if available) to be non-primary identifiers that resolve to *"UTC"*.
-      This is the only deviation from the IANA Time Zone Database that is required of a time zone aware ECMAScript implementation.
+      Each Zone in the IANA Time Zone Database must be a primary time zone identifier and each Link name in the IANA Time Zone Database must be a non-primary time zone identifier that resolves to its corresponding Zone name, with the following exceptions implemented in AvailableNamedTimeZoneIdentifiers:
     </p>
+    <ul>
+      <li>
+        For historical reasons, *"UTC"* must be a primary time zone identifier.
+        *"Etc/UTC"*, *"Etc/GMT"*, and *"GMT"*, as well as all Link names that resolve to any of them, must be non-primary time identifiers that resolve to "UTC".
+      </li>
+      <li>
+        Any Link name in the TZ column of *zone.tab* of the IANA Time Zone Database must be a primary time zone identifier.
+        For example, both *"Europe/Prague"* and *"Europe/Bratislava"* must be primary time zone identifiers.
+        This requirement guarantees at least one primary time zone identifier for each ISO 3166-2 country code <a href="https://www.iso.org/iso-3166-country-codes.html">https://www.iso.org/iso-3166-country-codes.html</a>.
+        Also, future changes to time zone rules of one country will not affect ECMAScript programs that use another country's time zones, unless those countries' territorial boundaries have also changed.
+      </li>
+      <li>
+        Any Link name that is not listed in the TZ column of *zone.tab* and that represents a geographical area entirely contained within the territory of a single ISO 3166-2 country code <a href="https://www.iso.org/iso-3166-country-codes.html">https://www.iso.org/iso-3166-country-codes.html</a> must resolve to a primary identifier that also represents a geographical area entirely contained within the territory of the same ISO 3166-2 country code.
+        For example, *"Atlantic/Jan_Mayen"* must resolve to *"Arctic/Longyearbyen"*.
+      </li>
+      <li>
+        <emu-not-ref>Legacy</emu-not-ref> POSIX identifiers must be non-primary time zone identifiers that resolve to their closest non-legacy equivalents, as shown in the table below:
+      </li>
+    </ul>
+
+    <emu-table id="table-posix-time-zone-identifier-mapping">
+      <emu-caption><emu-not-ref>Legacy</emu-not-ref> POSIX Time Zone Identifier Mapping</emu-caption>
+      <table class="real-table">
+        <thead style="white-space: nowrap">
+          <tr>
+            <th><emu-not-ref>Legacy</emu-not-ref> POSIX Zone Name</th>
+            <th>Primary Time Zone Identifier</th>
+          </tr>
+        </thead>
+        <tr>
+          <td>*"EST"*</td>
+          <td>*"Etc/GMT+5"*</td>
+        </tr>
+        <tr>
+          <td>*"MST"*</td>
+          <td>*"Etc/GMT+7"*</td>
+        </tr>
+        <tr>
+          <td>*"HST"*</td>
+          <td>*"Etc/GMT+10"*</td>
+        </tr>
+        <tr>
+          <td>*"EST5EDT"*</td>
+          <td>*"America/New_York"*</td>
+        </tr>
+        <tr>
+          <td>*"CST6CDT"*</td>
+          <td>*"America/Chicago"*</td>
+        </tr>
+        <tr>
+          <td>*"MST7MDT"*</td>
+          <td>*"America/Denver"*</td>
+        </tr>
+        <tr>
+          <td>*"PST8PDT"*</td>
+          <td>*"America/Los_Angeles"*</td>
+        </tr>
+        <tr>
+          <td>*"WET"*</td>
+          <td>*"Europe/Lisbon"*</td>
+        </tr>
+        <tr>
+          <td>*"CET"*</td>
+          <td>*"Europe/Berlin"*</td>
+        </tr>
+        <tr>
+          <td>*"MET"*</td>
+          <td>*"Europe/Vienna"*</td>
+        </tr>
+        <tr>
+          <td>*"EET"*</td>
+          <td>*"Europe/Athens"*</td>
+        </tr>
+      </table>
+    </emu-table>
+
+    <emu-note>
+      <p>
+        The IANA Time Zone Database offers build options that affect which time zone identifiers are primary.
+        The default build options merge different countries' time zones, for example *"Atlantic/Reykjavik"* is built as a Link to the Zone *"Africa/Abidjan"*.
+        Geographically and politically distinct locations are likely to introduce divergent time zone rules in a future version of the IANA Time Zone Database.
+        The exceptions above serve to mitigate these future-compatibility issues for ECMAScript programmers and end users.
+      </p>
+      <p>
+        International Components for Unicode (ICU) <a href="https://icu.unicode.org/">https://icu.unicode.org/</a> is a widely-used library that exposes IANA Time Zone Database information.
+        ICU implements most of the exceptions above when determining which available named time zone identifiers are primary or non-primary.
+        Although use of ICU is recommended for consistency between implementations, it is not required.
+        Non-ICU-based implementations can still use ICU's identifier data, as found in *timezone.xml* in the Unicode Common Locale Data Repository (CLDR) <a href="https://cldr.unicode.org/">https://cldr.unicode.org/</a>.
+        Implementations may also build the IANA Time Zone Database directly, for example by using build options such as <code>PACKRATDATA=backzone PACKRATLIST=zone.tab</code> and performing any post-processing needed to ensure compliance with the requirements above.
+      </p>
+    </emu-note>
+
     <p>
       The IANA Time Zone Database is typically updated between five and ten times per year.
       These updates may add new Zone or Link names, may change Zones to Links, and may change the UTC offsets and transitions associated with any Zone.
       ECMAScript implementations are recommended to include updates to the IANA Time Zone Database as soon as possible.
       Such prompt action ensures that ECMAScript programs can accurately perform time-zone-sensitive calculations and can use newly-added available named time zone identifiers supplied by external input or the host environment.
+    </p>
+    <p>
+      Although the IANA Time Zone Database maintainers strive for stability, in rare cases (averaging less than once per year) a Zone may be replaced by a new Zone.
+      For example, in 2022 "*Europe/Kiev*" was deprecated to a Link resolving to a new "*Europe/Kyiv*" Zone.
+      The deprecated Link is called a <dfn variants="renamed time zone identifiers">renamed time zone identifier</dfn> and the newly-added Zone is called a <dfn variants="replacement time zone identifiers">replacement time zone identifier</dfn>.
+    </p>
+    <p>
+      To reduce disruption from these infrequent changes, ECMAScript implementations must initially add each replacement time zone identifiers as a non-primary time zone identifier that resolves to the existing renamed time zone identifier.
+      This allows ECMAScript programs to recognize both identifiers, but also reduces the chance that an ECMAScript program will send the replacement time zone identifier to another system that does not yet recognize it.
+      After a waiting period, implementations must promote the new Zone to a primary time zone identifier while simultaneously demoting the renamed time zone identifier to non-primary.
+      This waiting period is two years after the IANA Time Zone Database release containing the changes, to provide ample time for other systems to be updated.
+      After two years, implementations should update their time zone data to make the replacement time zone identifier primary and the renamed time zone identifier non-primary.
+      This two-year period does not need to be exact.
+      For example, it's acceptable to wait until the next ICU release after two years has expired.
+    </p>
+    <p>
+      A waiting period should only apply when a new Zone is added to replace an existing Zone.
+      If an existing Zone and Link are swapped, then no renaming has happened and no waiting period is necessary.
     </p>
 
     <p>
@@ -194,15 +299,7 @@
     </p>
 
     <p>This section complements but does not supersede <emu-xref href="#sec-time-zone-identifiers"></emu-xref>.</p>
-
-    <emu-note>
-      <p>
-        The IANA Time Zone Database offers build options that affect which time zone identifiers are primary.
-        The default build options merge different countries' time zones, for example *"Atlantic/Reykjavik"* being a Link to the Zone *"Africa/Abidjan"*.
-        Geographically and politically distinct locations are likely to introduce divergent time zone rules in a future version of the IANA Time Zone Database.
-        Therefore, it is recommended that ECMAScript implementations instead use build options such as <code>PACKRATDATA=backzone PACKRATLIST=zone.tab</code> or a similar alternative that ensures at least one primary identifier for each <a href="https://www.iso.org/glossary-for-iso-3166.html">ISO 3166-1 Alpha-2</a> country code.
-      </p>
-    </emu-note>
+    </emu-clause>
 
     <emu-clause id="sup-availablenamedtimezoneidentifiers" oldids="sec-availabletimezones" type="implementation-defined abstract operation">
       <h1>AvailableNamedTimeZoneIdentifiers ( ): a List of Time Zone Identifier Records</h1>
@@ -224,10 +321,30 @@
         1. Let _result_ be a new empty List.
         1. For each element _identifier_ of _identifiers_, do
           1. Let _primary_ be _identifier_.
-          1. If _identifier_ is a non-primary time zone identifier and _identifier_ is not *"UTC"*, then
-            1. Set _primary_ to the name of the primary time zone identifier that _identifier_ resolves to, according to the rules for resolving Link names in the IANA Time Zone Database.
-            1. NOTE: An implementation may need to resolve _identifier_ iteratively to obtain the primary time zone identifier.
-          1. If _primary_ is one of *"Etc/UTC"*, *"Etc/GMT"*, or *"GMT"*, set _primary_ to *"UTC"*.
+          1. If _identifier_ is listed in the first column of <emu-not-ref>Legacy</emu-not-ref> POSIX Time Zone Identifier Mapping <emu-xref href="#table-posix-time-zone-identifier-mapping"></emu-xref>, then
+            1. Set _primary_ to the value in the second column of the row where the first column is _identifier_.
+          1. Else,
+            1. NOTE: The algorithm steps below are intended to mimic the behaviour of the *icu::TimeZone::getIanaID()* API of the International Components for Unicode (ICU) <a href="https://icu.unicode.org/">https://icu.unicode.org/</a>.
+               The steps in this section are provided for testing conformance of ICU-based ECMAScript implementations, and to ensure compatibility between ICU-based and non-ICU-based implementations.
+            1. If _identifier_ is present in the *TZ* column of *zone.tab* of the IANA Time Zone Database, then
+              1. Set _primary_ to _identifier_.
+            1. Else if _identifier_ is a Link in the IANA Time Zone Database, then
+              1. Let _zone_ be the Zone name that _identifier_ resolves to, according to the rules for resolving Link names in the IANA Time Zone Database.
+              1. If _zone_ starts with *"Etc/"*, then
+                1. Set _primary_ to _zone_.
+              1. Else,
+                1. Let _identifierCountyCode_ be the ISO 3166-2 country code <a href="https://www.iso.org/iso-3166-country-codes.html">https://www.iso.org/iso-3166-country-codes.html</a> whose territory contains the geographical area corresponding to _identifier_.
+                1. Let _zoneCountyCode_ be the ISO 3166-2 country code whose territory contains the geographical area corresponding to _zone_.
+                1. If _identifierCountyCode_ is _zoneCountyCode_, then
+                  1. Set _primary_ to _zone_.
+                1. Else,
+                  1. Let _countryCodeLine_ be the line in *zone.tab* of the IANA Time Zone Database where the *country-code* column is _identifierCountyCode_.
+                  1. Set _primary_ to the contents of the *TZ* column of _countryCodeLine_.
+            1. If _primary_ is one of *"Etc/UTC"*, *"Etc/GMT"*, or *"GMT"*, set _primary_ to *"UTC"*.
+            1. If _primary_ is a replacement time zone identifier, and it has been less than two years since the release of the IANA Time Zone Database that added the new Zone, then
+              1. Set _primary_ to the renamed time zone identifier that the replacement time zone identifier is replacing.
+              1. NOTE: This two year waiting period does not need to be exact, and is not required to be applied dynamically, especially in implementations that do not update time zone data between releases.
+                Instead, implementations may make the replacement time zone identifier primary as part of their normal release process for updating time zone data, and to release the change as close as practical to the end of the two year waiting period.
           1. Let _record_ be the Time Zone Identifier Record { [[Identifier]]: _identifier_, [[PrimaryIdentifier]]: _primary_ }.
           1. Append _record_ to _result_.
         1. Assert: _result_ contains a Time Zone Identifier Record _r_ such that _r_.[[Identifier]] is *"UTC"* and _r_.[[PrimaryIdentifier]] is *"UTC"*.
