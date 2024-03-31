@@ -170,7 +170,7 @@
     <p>
       Implementations of this specification must be time zone aware: they must use the IANA Time Zone Database <a href="https://www.iana.org/time-zones/">https://www.iana.org/time-zones/</a> to supply time zone identifiers and data used in ECMAScript calculations and formatting.
       This section defines how the IANA Time Zone Database should be used by time zone aware implementations.
-      No String may be an available named time zone identifier unless it is a Zone name or a Link name in the IANA Time Zone Database.
+      No String may be an available named time zone identifier unless it is a Zone name or a Link name in the IANA Time Zone Database, or is *"Etc/Unknown"*.
       Available named time zone identifiers returned by ECMAScript built-in objects must use the casing found in the IANA Time Zone Database.
     </p>
     <p>
@@ -190,6 +190,9 @@
       <li>
         Any Link name that is not listed in the TZ column of *zone.tab* and that represents a geographical area entirely contained within the territory of a single ISO 3166-2 country code <a href="https://www.iso.org/iso-3166-country-codes.html">https://www.iso.org/iso-3166-country-codes.html</a> must resolve to a primary identifier that also represents a geographical area entirely contained within the territory of the same ISO 3166-2 country code.
         For example, *"Atlantic/Jan_Mayen"* must resolve to *"Arctic/Longyearbyen"*.
+      </li>
+      <li>
+        The Zone name *"Factory"*, which represents a host environment whose time zone has not yet been defined, must be a non-primary time zone identifier that resolves to "Etc/Unknown", the identifier of the Unknown Time Zone.
       </li>
       <li>
         <emu-not-ref>Legacy</emu-not-ref> POSIX identifiers must be non-primary time zone identifiers that resolve to their closest non-legacy equivalents, as shown in the table below:
@@ -299,6 +302,38 @@
     </p>
 
     <p>This section complements but does not supersede <emu-xref href="#sec-time-zone-identifiers"></emu-xref>.</p>
+
+      <emu-clause id="sec-unknown-time-zone">
+        <h1>Unknown Time Zone</h1>
+
+        <p>
+          ECMAScript implementations must make a best effort in SystemTimeZoneIdentifier to return the primary time zone identifier that is most closely associated with the host environment's time zone.
+          However, in some cases the host environment's time zone cannot be determined or is not recognized, for example if the host environment uses a later version of the IANA Time Zone Database that contains newly-added identifiers that the ECMAScript implementation does not yet recognize.
+          In those cases, the <dfn>Unknown Time Zone</dfn> is used.
+          This time zone must behave identically to the UTC time zone, except:
+        </p>
+        <ul>
+          <li>
+            Its identifier is *"Etc/Unknown"*, as defined in <a href="https://www.unicode.org/reports/tr35/tr35.html#Time_Zone_Identifiers">Unicode Technical Standard #35 Part 1 Core, Time Zone Identifiers</a>.
+            *"Etc/Unknown"* must be a primary time zone identifier.
+            For time zone aware implementations, this is the only available named time zone identifier that is not required to exist in the IANA Time Zone Database.
+          </li>
+          <li>
+            An ECMAScript implementation that implements this specification is recommended to provide a localized name for the Unknown Time Zone that is different from the localized name of all other available named time zones.
+          </li>
+        </ul>
+        </p>
+          These differences help programmers and end users recognize that a problem exists which may require action to fix, without causing ECMAScript programs to fail whenever SystemTimeZoneIdentifier is called.
+        </p>
+        </p>
+          All implementations of this specification, including implementations that will never return *"Etc/Unknown*" from SystemTimeZoneIdentifier because they share the host environment's list of available named time zone identifiers, must still treat *"Etc/Unknown"* as a primary time zone identifier, for example in the *timeZone* option of the %Intl.DateTimeFormat% constructor.
+        </p>
+        <emu-note>
+          <p>
+            In addition to helping programmers and end users identify problems, another reason this specification requires the Unknown Time Zone is to ensure compatibility with ICU <a href="https://icu.unicode.org/">https://icu.unicode.org/</a>, the time zone library used by many ECMAScript implementations to implement SystemTimeZoneIdentifier.
+          </p>
+        </emu-note>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sup-availablenamedtimezoneidentifiers" oldids="sec-availabletimezones" type="implementation-defined abstract operation">
@@ -317,12 +352,15 @@
         1. Let _identifiers_ be a List containing the String value of each Zone or Link name in the IANA Time Zone Database.
         1. Assert: No element of _identifiers_ is an ASCII-case-insensitive match for any other element.
         1. Assert: Every element of _identifiers_ identifies a Zone or Link name in the IANA Time Zone Database.
+        1. Append *"Etc/Unknown"* to _identifiers_.
         1. Sort _identifiers_ into the same order as if an Array of the same values had been sorted using %Array.prototype.sort% with *undefined* as the argument.
         1. Let _result_ be a new empty List.
         1. For each element _identifier_ of _identifiers_, do
           1. Let _primary_ be _identifier_.
           1. If _identifier_ is listed in the first column of <emu-not-ref>Legacy</emu-not-ref> POSIX Time Zone Identifier Mapping <emu-xref href="#table-posix-time-zone-identifier-mapping"></emu-xref>, then
             1. Set _primary_ to the value in the second column of the row where the first column is _identifier_.
+          1. Else if _primary_ is *"Etc/Unknown"* or *"Factory"*, then
+            1. Set _primary_ to *"Etc/Unknown"*.
           1. Else,
             1. NOTE: The algorithm steps below are intended to mimic the behaviour of the *icu::TimeZone::getIanaID()* API of the International Components for Unicode (ICU) <a href="https://icu.unicode.org/">https://icu.unicode.org/</a>.
                The steps in this section are provided for testing conformance of ICU-based ECMAScript implementations, and to ensure compatibility between ICU-based and non-ICU-based implementations.
